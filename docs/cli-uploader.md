@@ -498,6 +498,15 @@ application-session check described under selected-file writes above.
 2. Compare individual loader sentinel bytes and its stored CRC word. Check the
    activation ABI for a calibration update, read the retained domain's CRC
    trailer, and check space for the required loader metadata transaction.
+   Before a software update, read and validate the MCU identity and RAM options.
+   Accept a valid existing 384/448/512 KiB setting, or erased EOPB0=FFFF with
+   access=5AA5 and no SLIB restriction for first-boot RAM setup. Unsupported,
+   protected insufficient, malformed or unreadable settings stop before any
+   erase/download/metadata write or activation reset. The check logs the observed
+   options and does not change them. It also runs for `--check-target` software
+   images; OEM BIN restoration and calibration-only updates do not use this
+   replacement-software RAM gate. Eligibility does not replace the firmware's
+   image CRC, marker or option-write checks at startup.
 3. Erase only the chosen domain, in 4 KiB requests. Software uses two disjoint
    ranges, preserving the calibration gap. Download each range with 34/36/37,
    honoring negotiated block length and starting the counter at zero.

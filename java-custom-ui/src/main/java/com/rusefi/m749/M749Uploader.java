@@ -59,6 +59,11 @@ final class M749Uploader {
             out.accept(profile + " loader compatibility sentinels match; authentication accepted");
             image.requireTarget(profile);
 
+            if (image.domain == M749Image.Domain.SOFTWARE) {
+                phase = "checking RAM configuration before application erase";
+                new M749RamPreflight(reader).check(out);
+            }
+
             phase = "activation preflight";
             if (image.domain == M749Image.Domain.CALIBRATION) {
                 boolean legacy = reader.matches(M749Image.ACTIVATION_ADDRESS + 7, 1, '1');

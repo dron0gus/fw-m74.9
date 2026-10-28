@@ -336,3 +336,9 @@ INI; a newly generated INI also has a newly generated firmware signature.
   default does not migrate an existing stored tune: setting an output pin in
   defaults alone will not correct an already saved unassigned channel. Such a
   tune needs its GPPWM assignment, frequency and table updated explicitly.
+
+- On the protected I862 unit, authenticated loader FF01 byte comparisons read
+  access=FFFF, EOPB0=00FF and MCU=70084540 over SocketCAN without clearing FAP.
+  The new software preflight rejects this configuration before application
+  erase. Protection does not by itself make these diagnostic values unreadable;
+  already sufficient RAM must remain accepted even when protection is enabled.

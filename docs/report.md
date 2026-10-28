@@ -192,3 +192,36 @@ then restored unrelated generated output. Submodule worktree is clean and
 both source/documentation whitespace checks pass. Follow-up: verify actual
 routing, add the UART/IRQ/timer transport, qualify signal mappings and test on
 hardware. No ECU programming, commit or push.
+
+
+## 2026-10-27: Reject unsupported RAM setup before software erase
+
+Added a read-only RAM eligibility check after loader profile matching and
+before application erase, including software --check-target. Valid existing
+384/448/512 KiB options pass with protection enabled. First-boot adjustment
+requires EOPB0=FFFF, access=5AA5, the supported MCU and no SLIB restriction.
+Non-erased insufficient/invalid options and failed or untrustworthy reads
+stop before erase, download, metadata writes or activation reset.
+
+| File | Change |
+| --- | --- |
+| M749RamPreflight.java / M749Uploader.java | Startup eligibility gate and observed-value diagnostics before software mutation |
+| M749ChecksumReader.java | Separate one-byte comparison path limited to 12 option/identity/SLIB bytes; flash-reader bounds unchanged |
+| M749RamPreflightTest.java / M749UploaderTest.java | Accepted/rejected configurations, malformed/lost/negative replies, wrong-candidate controls, address bounds and request-order assertions |
+| M749OemImageTest.java | All OEM profiles restore with protected 128 KiB options |
+| docs/cli-uploader.md | Gate behavior, scope and first-boot validation limits |
+
+Validation: all 222 custom-console tests passed with no failures/errors/skips.
+Built :ui:shadowJar and :custom-java-ui:installM749Cli with board discovery
+settings. Packaged console includes the new class and
+use_canbus_connector=true. Live --check-target over can0 rejected
+EOPB0=00FF access=FFFF MCU=70084540 in about three seconds, with expected exit
+1 and no erase/programming request. The local software image CRC 46577FAF
+was used only for preflight and was not uploaded. OEM recovery and
+calibration-only updates retain their existing workflow.
+
+Eligibility does not replace startup CRC, marker or option-write validation.
+No live accepted-case upload or option change was performed. The updated
+console must be used to obtain the new check; older bundles are unchanged.
+Tracked submodule files remain clean; unrelated local files were preserved.
+No commit or push.

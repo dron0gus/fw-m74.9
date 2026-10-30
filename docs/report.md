@@ -225,3 +225,79 @@ No live accepted-case upload or option change was performed. The updated
 console must be used to obtain the new check; older bundles are unchanged.
 Tracked submodule files remain clean; unrelated local files were preserved.
 No commit or push.
+
+
+## 2026-10-30: Read flash includes a separate FF01 USD backup
+
+Read flash now saves the main-flash BIN followed by a separate 4096-byte
+<filename>.usd.bin covering 1FFFC000..1FFFCFFF. The UI passes --with-usd;
+CLI callers can select it explicitly. The main-flash BIN format is unchanged.
+
+| Change | Behavior |
+| --- | --- |
+| M749UsdReader / M749ChecksumReader | Read each physical USD byte using FF01, require matching and wrong-candidate controls, retain complements/reserved/user data |
+| FlashReadFile | Separate USD checkpoint format, 64-byte progress, saved-byte verification on resume and no overwrite |
+| M749ReadFlashCli / M749Cli | Publish main flash, reset helper, reauthorize pairing if supplied, validate resident loader, read USD; standalone --read-usd for recovery |
+| M749Panel | Read flash includes USD and shows companion filename in the save dialog |
+| Tests / CLI guide | Complete capture, session ordering, rejected admission, failures, preserved main image, resume, bounds and usage |
+
+Validation: all 228 custom-console tests passed, zero failures/errors/skips.
+Built :ui:shadowJar and :custom-java-ui:installM749Cli with ABSOLUTE_BOARD_DIR.
+Confirmed packaged M749UsdReader, UI --with-usd flag and
+use_canbus_connector=true. Installed CLI --read-usd --help passed without
+adapter access. git diff --check passed.
+
+A failure in the USD stage retains the completed main-flash image and does
+not request another reset. --read-usd with --resume retries the partial USD
+image without uploading the helper again. The read path sends no erase,
+programming or metadata-write commands. No physical ECU/CAN/debug access was
+performed; full USD export and the combined session transition still need
+hardware validation. Existing submodule pointer and unrelated files were
+preserved. No commit or push.
+
+
+## 2026-10-30: Replace USD FF01 reads with RAM-helper block reads
+
+Reimplemented the USD stage at user request using the existing RAM helper's
+SID 23. Main flash and the separate 4096-byte USD image now share one helper
+session; there is no reset or resident-loader authorization between stages.
+
+| Change | Result |
+| --- | --- |
+| M749RamHelper / M749UsdReader | Dedicated USD bounds, up to 4080 bytes per request, two matching reads per new block |
+| Read CLI | --with-usd uses the current helper; standalone --read-usd supports --helper-running and --chunk-size |
+| FlashReadFile | M749USD2 checkpoint, helper hash, CPU identity and duplicate-read semantics; old FF01 progress rejected |
+| Tests / CLI guide / CLAUDE.md | Updated single-session behavior, resume, boundaries and validation limits |
+
+Removed the added USD-specific FF01 path from M749ChecksumReader; existing
+preflight and diagnostic behavior remains unchanged. Complete main-flash
+output survives USD failure, with no failure reset. Resume verifies saved
+USD bytes before extending the file. The helper binary itself is unchanged.
+
+Validation: all 229 custom-console tests passed, zero failures/errors/skips.
+Coverage includes all raw byte values, 4080+16 byte split, two reads per
+block, mismatched/short/wrong-address/lost replies, cancellation, saved-byte
+mismatch, retained main image, running-helper resume, fresh bootstrap,
+probe rejection and old-format checkpoint rejection before adapter access.
+The combined test checks one helper upload and only one final reset after
+both outputs exist. Built console/CLI, verified packaged helper-based USD
+class and use_canbus_connector=true, checked CLI help and git diff --check.
+No ECU/CAN/debugger access was performed. Full physical USD export remains
+unvalidated. Existing unrelated changes were preserved. No commit or push.
+
+
+## 2026-10-30: Live RAM-helper USD read attempt over can0
+
+Tested the rebuilt console against the failed-upload I862 unit at the user's
+request. can0 was up at 500 kbit/s with no reported CAN errors. Before and
+after the attempt, identity returned F186=02, F189=M749-29444F39 and
+F192=8450043732. --read-usd sent 10 60 and received 7F 10 11. The command
+exited 1 with zero verified bytes and no published USD BIN. It stopped before
+security access, RAM upload or helper execution; no erase, download, option
+programming or reset was requested.
+
+This confirms rejection of helper bootstrap from the current resident-loader
+state. Full USD reads through the helper remain physically unvalidated. A
+working OEM application session is required even when option memory is intact.
+Documented this limitation; no code changes, firmware restoration or debugger
+access. No commit or push.

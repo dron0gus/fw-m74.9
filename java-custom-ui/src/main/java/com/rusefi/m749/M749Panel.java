@@ -383,6 +383,7 @@ public final class M749Panel extends JPanel {
         if (read) {
             chooser.setSelectedFile(new java.io.File("m749-full-" + java.time.Instant.now().toString().replaceAll("[:.]", "-") + ".bin"));
             JPanel options = new JPanel(new GridLayout(0, 1));
+            options.add(new JLabel("Also saves options to <filename>.usd.bin"));
             options.add(resume);
             options.add(running);
             chooser.setAccessory(options);
@@ -407,6 +408,7 @@ public final class M749Panel extends JPanel {
         if (options == null) return;
         args.addAll(options.arguments());
         if (read) {
+            args.add("--with-usd");
             args.add("--reset-after");
             if (selection.resume) args.add("--resume");
             if (selection.helperRunning) args.add("--helper-running");

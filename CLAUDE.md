@@ -342,3 +342,17 @@ INI; a newly generated INI also has a newly generated firmware signature.
   The new software preflight rejects this configuration before application
   erase. Protection does not by itself make these diagnostic values unreadable;
   already sufficient RAM must remain accepted even when protection is enabled.
+
+- Read flash adds a separate raw 4096-byte USD backup through the same RAM
+  helper's SID 23, without an intermediate reset or resident-loader transition.
+  Its 4080-byte response limit means the 4 KiB area needs at least two blocks.
+  Keep main-flash and USD ranges distinct; arbitrary RAM/MMIO remains excluded.
+  A failed USD stage leaves the valid main-flash BIN and helper active; resume
+  only USD with --read-usd --resume --helper-running when appropriate. USD
+  checkpoints use M749USD2 and the helper hash; old FF01 M749USD1 progress is
+  rejected. Full physical USD export through the helper remains unvalidated.
+
+- Live USD read on the failed-upload I862 unit in resident-loader session 02
+  rejected application session 60 with 7F 10 11 before RAM upload. Untouched
+  options do not enable helper bootstrap when OEM application support is absent.
+  This is a launch limitation, not evidence that helper USD reads are blocked.

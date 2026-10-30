@@ -157,6 +157,12 @@ class UdsClientTest {
         UdsClient.NegativeResponse error = assertThrows(UdsClient.NegativeResponse.class,
                 () -> negative.client().exchange(bytes(0x36, 0, 1), bytes(0x76, 0), 500));
         assertEquals(0x72, error.code);
+        Bus logged = new Bus();
+        logged.rx.add(bytes(3, 0x7F, 0x22, 0x31));
+        List<String> log = new ArrayList<>();
+        assertThrows(UdsClient.NegativeResponse.class, () -> new UdsClient(logged, logged, 0, 1, 0, log::add)
+                .exchange(bytes(0x22, 0xF1, 0xA0), bytes(0x62, 0xF1, 0xA0), 500));
+        assertTrue(log.isEmpty(), log.toString());
     }
 
     @Test void receivesMaximumHelperBlockWithFiniteFlowControlAndWrapAndIgnoresPadding() throws Exception {

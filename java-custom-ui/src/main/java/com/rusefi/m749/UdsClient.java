@@ -88,9 +88,11 @@ final class UdsClient implements M749Uploader.Connection {
             throw new IllegalArgumentException("Invalid UDS request/prefix/timeout");
         }
         recent.clear();
-        lastFlowControl = "no ECU flow control received";
+        lastFlowControl = request.length <= 7 ? "single-frame request" : "no ECU flow control received";
         try {
             return exchangeOnce(request, prefix, timeout);
+        } catch (NegativeResponse e) {
+            throw e; // A complete reply arrived; the caller reports the NRC.
         } catch (IOException e) {
             log.accept(String.format("UDS failure: SID %02X, %s; no request replay. Recent transport events: %s",
                     sid, phase, lastFlowControl + " | " + String.join(" | ", recent)));

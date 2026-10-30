@@ -41,7 +41,16 @@ final class M749RamHelper {
         }
         if (!alreadyRunning) {
             out.accept("Entering application session 60 for RAM helper upload");
-            exact(bytes(0x10, 0x60), bytes(0x50, 0x60), 6);
+            try {
+                exact(bytes(0x10, 0x60), bytes(0x50, 0x60), 6);
+            } catch (UdsClient.NegativeResponse e) {
+                if (e.code == 0x11 || e.code == 0x12 || e.code == 0x7E || e.code == 0x7F) {
+                    out.accept(String.format("Session 60 is unavailable (NRC %02X): it requires a running OEM application. "
+                            + "An ECU left in the resident loader (F186=02) after an interrupted upload rejects it. "
+                            + "Nothing was uploaded, erased or reset.", e.code));
+                }
+                throw e;
+            }
             out.accept("Application session 60 accepted");
             byte[] seedReply = exact(bytes(0x27, 1, 0), bytes(0x67, 1), 6);
             int seed = (seedReply[2] & 255) << 24 | (seedReply[3] & 255) << 16 |
@@ -101,6 +110,15 @@ final class M749RamHelper {
     byte[] read(int address, int length) throws IOException, InterruptedException {
         requireRange(address, length);
         if (length > MAX_BLOCK) { throw new IllegalArgumentException("Maximum read block is 4080 bytes"); }
+        return readAddress(address, length);
+    }
+
+    // Keep USD separate from the public main-flash range; no arbitrary memory reads.
+    byte[] readUsd(int address, int length) throws IOException, InterruptedException {
+        if (address < M749UsdReader.BASE || length < 1 || length > MAX_BLOCK ||
+                (long) address + length > (long) M749UsdReader.BASE + M749UsdReader.SIZE) {
+            throw new IllegalArgumentException("USD read must be within 0x1FFFC000..0x1FFFCFFF, at most 4080 bytes");
+        }
         return readAddress(address, length);
     }
 

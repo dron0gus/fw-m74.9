@@ -66,7 +66,7 @@ float bounded(float value, float low, float high) {
 uint16_t indicatedSpeed(float speed) {
     // Keep the fixed-point rounding of the indicated-speed conversion.
     // Zero or unavailable speed stays zero; positive speed gets gain/offset.
-    const uint32_t q6 = bounded(speed, 0, 500) * 64;
+    const uint32_t q6 = static_cast<uint32_t>(bounded(speed, 0, 500) * 64);
     const uint32_t indicated = q6 ? ((q6 * 16712) >> 14) + 125 : 0;
     const uint32_t raw = (indicated * 5) / 32;
     return raw > 4095 ? 4095 : raw;
@@ -128,7 +128,7 @@ void M749VehicleCanTransmitter::update() {
             if (frame.id == 0x186 && !largus) {
                 break;
             }
-            const uint16_t raw = rpm * 8;
+            const uint16_t raw = static_cast<uint16_t>(rpm * 8);
             msg[0] = raw >> 8;
             msg[1] = raw;
             break;
@@ -147,9 +147,9 @@ void M749VehicleCanTransmitter::update() {
             if (!largus) {
                 break;
             }
-            msg[0] = bounded(clt.Value, -40, 215) + 40;
-            msg[1] = bounded(engine->module<IdleController>().unmock().idleTarget, 0, 2040) / 8;
-            msg[4] = bounded(engineConfiguration->rpmHardLimit, 0, 8160) / 32;
+            msg[0] = static_cast<uint8_t>(bounded(clt.Value, -40, 215) + 40);
+            msg[1] = static_cast<uint8_t>(bounded(engine->module<IdleController>().unmock().idleTarget, 0, 2040) / 8);
+            msg[4] = static_cast<uint8_t>(bounded(engineConfiguration->rpmHardLimit, 0, 8160) / 32);
             break;
         case 0x65C:
             if (largus) {
@@ -165,7 +165,7 @@ void M749VehicleCanTransmitter::update() {
             m_counter35D = (m_counter35D + 1) & 0x0F;
             break;
         case 0x551:
-            msg[1] = bounded(clt.Value, -40, 215) + 40;
+            msg[1] = static_cast<uint8_t>(bounded(clt.Value, -40, 215) + 40);
             msg[5] = (msg[5] & 0x0F) | (m_counter551 << 4);
             m_counter551 = (m_counter551 + 1) & 0x0F;
             break;

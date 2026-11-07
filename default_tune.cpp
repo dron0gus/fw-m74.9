@@ -2,12 +2,12 @@
 #include "default_tune.h"
 
 void boardTuneDefaults() {
-    engineConfiguration->displacement = 1.6;
+    engineConfiguration->displacement = 1.6f;
 }
 
 void setM749IntakeRunnerDefaults() {
     auto& intake = engineConfiguration->gppwm[0];
-    strcpy(engineConfiguration->gpPwmNote[0], "Intake runner");
+    strcpy(config->gpPwmNote[0], "Intake runner");
     intake.pin = Gpio::E6;
     intake.pwmFrequency = 0; // On/off solenoid, controlled by the tune table.
     intake.rpmAxis = GPPWM_Rpm;

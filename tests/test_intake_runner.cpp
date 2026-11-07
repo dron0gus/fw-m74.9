@@ -20,7 +20,7 @@ TEST_F(M749IntakeRunner, TuneDefaults) {
     EngineTestHelper eth(engine_type_e::TEST_ENGINE);
     const auto& cfg = engineConfiguration->gppwm[0];
     EXPECT_EQ(Gpio::E6, cfg.pin);
-    EXPECT_STREQ("Intake runner", engineConfiguration->gpPwmNote[0]);
+    EXPECT_STREQ("Intake runner", config->gpPwmNote[0]);
     EXPECT_EQ(0, cfg.pwmFrequency);
     EXPECT_EQ(GPPWM_Rpm, cfg.rpmAxis);
     EXPECT_EQ(GPPWM_Tps, cfg.loadAxis);

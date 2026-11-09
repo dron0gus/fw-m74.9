@@ -223,6 +223,9 @@ rusEFI submodule; leave those generated changes unstaged.
   tab classes but does not select shared_io.resources; without the board
   environment, :ui:shadowJar uses generic discovery settings. Verify the jar's
   shared_io.properties includes use_canbus_connector=true before distribution.
+  Any firmware `bundle` target also rebuilds and overwrites
+  ext/rusefi/console/rusefi_console.jar; compile_firmware.sh and
+  _compile_bundle.sh therefore export both variables.
 
 - Live tune reads on WeAct V1.0.0.6 can stall after the first ISO-TP
   response frame (four TS body bytes received), even with F1A0 ready.

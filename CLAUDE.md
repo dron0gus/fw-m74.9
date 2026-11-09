@@ -359,3 +359,41 @@ INI; a newly generated INI also has a newly generated firmware signature.
   rejected application session 60 with 7F 10 11 before RAM upload. Untouched
   options do not enable helper bootstrap when OEM application support is absent.
   This is a launch limitation, not evidence that helper USD reads are blocked.
+
+- A successful OEM F000 launch acknowledgement does not certify a returning
+  RAM routine's result. Check the routine's CRC-protected result record.
+  USD maintenance requires an inspected full page before apply; its high-RAM
+  snapshot is lost on loader reset, while the reserved low-RAM result replaces
+  the normal boot diagnostic. The result has no sequence number, so verification
+  must compare live option contents and avoid claiming record freshness.
+  Long-running option routines can remain silent while interrupts are masked;
+  use the explicit bounded response window, without request replay.
+
+- Live I862 USD inspection can fail despite matching application/loader CRCs
+  and EOPB0=00FF: the Nov-9 unit contains reserved 0000 halfwords at offsets
+  048/04A. Inspection returns status 16 at 048, before option unlock/erase.
+  Table 5-5 wholly reserved byte ranges are 012..013, 01C..033 and 044..04B.
+  Revised maintenance accepts their raw halfwords and does not assume an
+  all-FFFF erased representation there. Restore passes both saved bytes
+  unchanged and exact final verification remains mandatory. Hardware may
+  ignore or transform a reserved write; a raw store alone does not establish
+  preservation. A full page, not just the first 32 bytes, is needed to qualify
+  the option state. Rejection reports retain offset and destructive flag.
+
+- The revised USD patcher passed one protected I862 live apply on Nov-9:
+  EOPB0 00FF -> 05FA, FAP FFFF and reserved 048/04A=0000 preserved. Every
+  USD byte was confirmed with a wrong-candidate control. The successful
+  software reset retained the applied report. This establishes preservation
+  for that snapshot, not arbitrary reserved raw-write behavior. After a
+  user-reported physical power cycle, stock identity and session-60 entry
+  succeeded; duplicate reads of all 4096 USD bytes matched the post-apply
+  page exactly. High-RAM runtime operation remains untested.
+  Verification started in session 02, but a later F186 query returned 01
+  without a host reset. Do not assume a loader diagnostic session persists
+  across idle time or report its current value without querying it.
+
+- A Swing directories-only chooser can return the existing current folder even
+  when seeded with a nonexistent timestamped name. Do not treat that selection
+  as a fresh output directory. For USD inspection, select an existing parent
+  and derive a new child; keep CLI creation exclusive. A bare path in an
+  IOException may be FileAlreadyExistsException, not an ECU/transport error.

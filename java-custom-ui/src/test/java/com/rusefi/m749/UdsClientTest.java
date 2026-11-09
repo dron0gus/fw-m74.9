@@ -22,6 +22,35 @@ class UdsClientTest {
         UdsClient client() { return new UdsClient(this, this); }
     }
 
+    @Test void longRunningRoutineWaitsForLateReplyWithoutRepeatingRequest() throws Exception {
+        for (boolean extended : new boolean[]{false, true}) {
+            Bus bus = new Bus() {
+                boolean delivered, pending;
+                @Override public byte[] receive() {
+                    now++;
+                    if (extended && !pending) { pending = true; return bytes(3, 0x7F, 0x31, 0x78); }
+                    if (!delivered && now >= 10_000) {
+                        delivered = true;
+                        return bytes(4, 0x71, 1, 0xF0, 0);
+                    }
+                    return null;
+                }
+            };
+            if (extended) {
+                assertArrayEquals(bytes(0x71, 1, 0xF0, 0), bus.client().exchangeLongRunning(
+                        bytes(0x31, 1, 0xF0, 0), bytes(0x71), 60_000));
+            } else {
+                assertThrows(UdsClient.Timeout.class, () -> bus.client().exchange(
+                        bytes(0x31, 1, 0xF0, 0), bytes(0x71), 60_000));
+            }
+            assertEquals(1, bus.tx.size());
+        }
+        Bus silent = new Bus();
+        assertThrows(UdsClient.Timeout.class, () -> silent.client().exchangeLongRunning(bytes(0x31), bytes(0x71), 60_000));
+        assertEquals(1, silent.tx.size());
+        assertTrue(silent.now >= 60_000 && silent.now < 60_010);
+    }
+
     @Test void honorsFlowControlBlocksStminAndSequenceWrap() throws Exception {
         Bus bus = new Bus();
         byte[] payload = new byte[180];

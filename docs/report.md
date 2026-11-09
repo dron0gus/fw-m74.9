@@ -366,3 +366,216 @@ Validation: 230 custom-console tests, 0 failures/errors/skips, including new
 M749RamHelperTest and UdsClientTest cases. Rebuilt the console jar with
 board settings. No ECU access in this step; the read limitation itself is
 unchanged. No commit or push.
+
+
+## 2026-11-09: Add explicit USD maintenance to CLI and console
+
+Added an I862 option-maintenance workflow that preserves flash protection and
+all raw USD contents except EOPB0=00FF -> 05FA. It is separate from ordinary
+firmware upload and requires the supported OEM application in session 60.
+
+| Change | Result |
+| --- | --- |
+| firmware/usd_patcher | Standalone source, build and resource-consistency target; 1812-byte production image |
+| CLI | --inspect-usd, --patch-usd with dry-run or explicit erase confirmation, --verify-usd-patch |
+| Console | USD maintenance chooser for inspection, confirmed apply and verification on the selected connection |
+| Backup and replay controls | Full saved page plus validated inspection; write-once outputs and apply-attempt marker before launch |
+| Result handling | Lost apply reply is unconfirmed (exit 3); no automatic replay or cleanup reset |
+| Verification | Checked retained result and all 4096 live USD bytes, each with a wrong-candidate control |
+| Transport | Explicit bounded long-running response wait; normal request/flow-control timing retained |
+| Documentation | Standalone usage, exact target constraints, failure handling and qualification limits |
+
+Validation: all 243 custom-console Java tests passed with no failures, errors
+or skips. Coverage includes malformed snapshots/reports, reserved encodings,
+wrong target/session, staging failure, duplicate apply rejection, full-page
+comparison, lost replies, late responses, UI cancellation and transfer exclusion.
+Rebuilt the payload with GCC 14.2.1; check-bundle confirms exact resource bytes
+and SHA-256 6c638b2df07937561f36463bb9798d338507b6d7eed81cb8369d2f2b0b6eb4fe.
+CLI and console packaging completed; resource and discovery-setting checks are
+recorded with the final session validation.
+
+No ECU hardware access or option programming was performed. Physical option
+erase/restore, full launch/collection lifecycle, watchdog timing and reset/power
+retention remain to be qualified. A resident-loader-only ECU still needs usable
+OEM application software before launch. Existing generated files and submodule
+changes were preserved. No commit or push.
+
+Final packaging checks passed: CLI --patch-usd --help exits zero without device
+access; console JAR contains the exact production USD BIN and maintenance
+classes; shared_io.properties retains use_canbus_connector=true. Whitespace
+checks and ASCII checks for the new guides passed.
+
+
+## 2026-11-09: Live USD maintenance connection check
+
+Attempted identification on the user-provided can0 before USD inspection or
+apply. The interface was up at 500000 bit/s, initially ERROR-ACTIVE. All five
+identification requests (F186/F189/F192/F1A4/F1A0) timed out with no ECU reply.
+The interface subsequently reported ERROR-PASSIVE. CLI exited 1.
+
+No session change, security request, RAM upload, reset, option erase or option
+programming was sent. Inspection and apply were not reached. Follow-up: confirm
+ECU power/key-on, CAN wiring and adapter selection before retrying. No code
+changes, commit or push; physical patch validation remains outstanding.
+
+
+## 2026-11-09: Retry USD maintenance connection check
+
+Retried read-only identification after the user confirmed readiness. All five
+DID requests timed out again, with no ECU responses. can0 remains ERROR-PASSIVE
+at 500000 bit/s. A host-interface restart was attempted but denied by OS
+permissions; noninteractive sudo requires a password. No interface change or
+ECU reset occurred. Asked the user to restart can0 locally before another check.
+No session change, security request, RAM upload or option programming was sent.
+USD inspection and apply remain untested on hardware. No commit or push.
+
+
+## 2026-11-09: Live I862 inspection and rejection diagnostics
+
+Stock I862BA02_w2309v4 / 8450043732 responded on can0 after connection recovery.
+Session 60, security, RAM payload upload and inspection return succeeded.
+The inspection report matched MCU 70084540, loader D7B6B894 and application
+B167C266, but rejected the option contents with status 16, stage 0, offset 048,
+EOPB0=00FF and destructive=0.
+
+Collected the complete raw 4096-byte USD page, confirming each block twice.
+Reserved halfwords at offsets 048 and 04A are 0000. The full page matches the
+previous backup exactly. Their preservation across erase is not established,
+so the option guard remains unchanged and no apply was attempted. No USD
+erase/programming or cleanup reset was sent; the RAM reader was left active.
+
+| Change | Result |
+| --- | --- |
+| Inspection diagnostics | Save CRC-valid rejection record; show stage, offset, EOPB0 and destructive flag |
+| Regression | Reserved 0000 values remain rejected; no usable apply inspection published |
+| Documentation | Describe the observed limitation and required preservation follow-up |
+
+Validation: 244 custom-console Java tests pass with no failures/errors/skips;
+CLI and console rebuilt. Live inspection and full USD readback are now checked,
+but physical erase/restore and reset/power retention remain unqualified. No
+payload changes, commit or push. Existing unrelated work was preserved.
+
+
+## 2026-11-09: Preserve raw reserved USD values
+
+Updated USD maintenance at user request after checking reference-manual table
+5-5. Wholly reserved byte ranges 012..013, 01C..033 and 044..04B now bypass
+complement-format and all-FFFF erase checks. Named fields retain their checks,
+including fields containing individual reserved bits.
+
+| Change | Result |
+| --- | --- |
+| Preflight and command validation | Accept raw values in all 17 reserved halfwords |
+| Restore | Pass each saved reserved value as a complete 16-bit store, without normalization; skip already-matching slots |
+| Verification | Require exact final page contents; ignored or transformed writes fail and cannot trigger reset |
+| Production resource | 1804 bytes; SHA-256 b112975af46925c3ca1f651a18a97fd68d733f38b3fa7d050eea3852428b213e |
+| Documentation | Exact reserved ranges, raw restore contract and physical validation limits |
+
+Validation: 245 custom-console Java tests passed with zero failures/errors/skips,
+including every reserved halfword and adjacent defined-field boundaries. Both
+payload builds match the bundled resource; CLI and console rebuilt with the
+new integrity guard, and use_canbus_connector=true remains packaged. The
+complete saved USD page is now accepted by offline input validation without
+changing its bytes. A fresh successful live inspection is still required.
+
+The manual does not guarantee arbitrary reserved raw-write acceptance. Exact
+readback remains mandatory; this revision has not been applied on hardware.
+No ECU requests, reset, erase or programming occurred in this work unit.
+No commit or push. Existing unrelated changes were preserved.
+
+
+## 2026-11-09: Successful live USD maintenance apply
+
+Ran the revised payload on protected I862BA02_w2309v4 / 8450043732 via can0.
+Saved and verified the full page before applying; inspection passed and the
+ECU returned to stock session 01. Launched apply exactly once. The expected
+missing final reply produced exit 3, followed by separate successful verification.
+
+| Check | Result |
+| --- | --- |
+| Payload SHA-256 | b112975af46925c3ca1f651a18a97fd68d733f38b3fa7d050eea3852428b213e |
+| Retained result | Applied, stage 6, zero failures, flash status 20 |
+| USD CRC | 659C4806 -> 3594D0D0 |
+| Full-page verification | 4096 expected-byte matches and 4096 wrong-candidate rejections |
+| Changed bytes | 010: FF -> FA; 011: 00 -> 05 (EOPB0=05FA, 384 KiB selection) |
+| Preserved | FAP FFFF, reserved 048/04A=0000 and all other USD bytes |
+| Final identity | F186=01, I862BA02_w2309v4, 8450043732 |
+
+No host reset or second apply was sent after the apply request. Verification
+began in session 02 but later identity returned session 01. Corrected the CLI
+wording that assumed the ECU remained in the loader and rebuilt CLI/console.
+Physical preservation and retained-result retrieval passed on this unit; no
+cold power cycle, high-RAM application operation, interrupted-write recovery
+or watchdog timing margin was tested. Exact preservation does not establish
+whether reserved fields survived erase or were rewritten. Documentation and
+durable guidance now distinguish this successful bench check from those limits.
+No payload behavior change, commit or push; unrelated work preserved.
+
+## 2026-11-09: USD option retention after physical power cycle
+
+After the user reported a physical power cycle, verified the protected I862
+ECU over can0. Stock identity and application session-60 reader entry worked.
+Collected two matching reads of each 1024-byte USD block and compared the
+complete page with the verified post-apply contents. No patch was reapplied.
+
+| Check | Result |
+| --- | --- |
+| Software / part | I862BA02_w2309v4 / 8450043732 |
+| USD retention | All 4096 bytes identical to verified post-apply contents |
+| EOPB0 / FAP | 05FA / FFFF |
+| Reserved 048 / 04A | Both 0000, preserved exactly |
+| Cleanup | Reader reset acknowledged, stock identity and session 01 confirmed |
+
+Identification, USD read and final identification all returned success.
+Updated maintenance guidance and payload qualification notes. Power interruption
+was reported by the user; no electrical power measurement was taken. High-RAM
+runtime operation, watchdog margins and interrupted-write recovery remain
+untested. No implementation change, commit or push.
+
+## 2026-11-09: Prepare USD maintenance commit
+
+User explicitly requested committing the completed USD maintenance work.
+Reviewed the implementation, payload resource, tests, guidance and hardware
+validation notes. Updated stale CLI/console wording to reflect the successful
+single-unit apply and power-cycle retention checks. High-RAM runtime and
+interrupted-write recovery remain untested.
+
+The commit includes only USD maintenance changes and their report entries.
+Unrelated simulator notes, generated files, local scripts and submodule work
+remain outside the commit. No push or additional ECU operation was requested.
+
+Validation: 245 Java tests passed with zero failures/errors/skips; CLI and
+console builds succeeded. Bundled payload matches the 1804-byte production
+image, console messages are current, and CAN connector discovery is enabled.
+Whitespace checks passed.
+
+## 2026-11-09: Fix console USD inspection folder selection
+
+Inspection failed before adapter access when the directory chooser selected an
+existing home folder. The CLI correctly required a new directory, but the UI
+passed the selected folder directly and displayed only the path from the
+FileAlreadyExistsException. The inspection did not reach the ECU.
+
+| Change | Result |
+| --- | --- |
+| Console selection | Choose an existing parent; create a new timestamped inspection child |
+| CLI diagnostics | Explain existing destinations and unusable parents before adapter access |
+| Regression tests | Complete inspection into a fresh child, preserve parent files, reject existing destinations without opening an adapter |
+| Guidance | Describe parent-folder selection and using the resulting child for Apply/Verify |
+
+Validation: 247 Java tests passed with zero failures/errors/skips; CLI and
+console builds succeeded. Reproduced the existing-folder rejection with the
+installed CLI and confirmed the actionable error without opening CAN. Verified
+the rebuilt console contains the fix, the exact unchanged 1804-byte payload
+and use_canbus_connector=true. Whitespace checks passed. Tests use a simulated
+transport; no new hardware inspection was run. Restart the console to load the
+rebuilt JAR. Changes remain uncommitted; unrelated work was preserved.
+
+## 2026-11-09: Amend USD maintenance commit with folder fix
+
+At explicit user request, include the inspection-folder fix, regression tests,
+updated guidance and related report entries in the existing USD maintenance
+commit. Validation remains 247 passing Java tests and successful CLI/console
+builds; staged whitespace and scope checked. No implementation changes since
+that validation. Unrelated simulator notes, generated files, local scripts and
+submodule changes remain uncommitted. No push or additional ECU operation.

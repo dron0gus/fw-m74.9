@@ -674,3 +674,13 @@ UDS errors include the current SID/phase, latest ECU flow control and up to 16
 recent frame metadata entries. Adapter BELL also logs bounded recent metadata.
 Firmware contents, security keys and pairing payloads are omitted. The pending
 UDS block address does not identify the exact CAN frame rejected by an adapter.
+
+## USD RAM-option maintenance
+
+The console's **USD maintenance** action and the CLI's `--inspect-usd`,
+`--patch-usd` and `--verify-usd-patch` commands provide separate I862 option
+inspection, explicit apply and verification. Apply requires a complete saved
+inspection and `--confirm-usd-erase`; `--dry-run` validates inputs offline.
+This operation is not performed by normal firmware upload. See the
+[USD maintenance guide](usd-patcher.md) for the exact target restrictions,
+commands, unconfirmed-result handling and hardware qualification limits.

@@ -19,6 +19,9 @@ final class M749Uploader {
     private static final int APPLICATION_READINESS_ATTEMPTS = 60;
     interface Connection {
         byte[] exchange(byte[] request, byte[] prefix, long timeout) throws IOException, InterruptedException;
+        default byte[] exchangeLongRunning(byte[] request, byte[] prefix, long timeout) throws IOException, InterruptedException {
+            return exchange(request, prefix, timeout);
+        }
         void pause(long milliseconds) throws InterruptedException;
     }
 

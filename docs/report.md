@@ -301,3 +301,68 @@ state. Full USD reads through the helper remain physically unvalidated. A
 working OEM application session is required even when option memory is intact.
 Documented this limitation; no code changes, firmware restoration or debugger
 access. No commit or push.
+
+
+## 2026-10-30: Console HeadlessException on Linux
+
+The console failed to start with java.awt.HeadlessException although
+DISPLAY=:1 was set. Only openjdk-21-jre-headless and openjdk-17-jre-headless
+were installed; their lib directories contain libawt_headless.so but no
+libawt_xawt.so, so Swing cannot open a window. Fix: install a full runtime
+(openjdk-21-jre). Added this requirement to readme.md. No code changes, no
+ECU access. No commit or push.
+
+
+## 2026-10-30: Console missing the M74.9 tab
+
+ext/rusefi/console/rusefi_console.jar built at 13:59 contained no
+com/rusefi/m749 classes, had use_canbus_connector=false and no Board-Git
+manifest attribute: it was built without RUSEFI_CUSTOM_JAVA_UI_DIR and
+ABSOLUTE_BOARD_DIR. Rebuilt with
+ABSOLUTE_BOARD_DIR="$PWD" bash bin/java-ui.sh :ui:shadowJar. The new jar has
+76 com/rusefi/m749 entries, use_canbus_connector=true, Board-Git 633703a26c78
+and Rusefi-Git 8271de1fb099. Documented the command in
+readme-technical-details.md. GUI startup not checked by me; no ECU access.
+No commit or push.
+
+
+## 2026-10-30: compile_firmware.sh bundle built a generic console
+
+compile_firmware.sh exported neither RUSEFI_CUSTOM_JAVA_UI_DIR nor
+ABSOLUTE_BOARD_DIR, so its bundle target rebuilt
+ext/rusefi/console/rusefi_console.jar without the M74.9 tab and with
+use_canbus_connector=false, overwriting an earlier correct bin/java-ui.sh
+build. _compile_bundle.sh set only RUSEFI_CUSTOM_JAVA_UI_DIR. Both scripts now
+export both variables, as CI does. tests/check_bundles.py also requires
+use_canbus_connector=true in the bundled console's shared_io.properties.
+
+Validation: bash compile_firmware.sh bundle -j12 exited 0. The console jar and
+the jar inside artifacts/rusefi_bundle_re74.9.zip both register
+com.rusefi.m749.M749TabProvider, have use_canbus_connector=true and carry
+Board-Git/Rusefi-Git manifest attributes. GUI display of the tab was not
+checked here; no ECU access. No commit or push.
+
+
+## 2026-10-30: Clearer read-flash diagnostics in resident-loader state
+
+Console log from the I862 unit (F186=02, F189=M749-29444F39, F192=8450043732)
+over can0: identification succeeded, F1A0/F1A4 returned NRC 31, and two
+Read flash attempts stopped at 10 60 with 7F 10 11, as recorded earlier today.
+The log had three misleading parts:
+
+- every negative response also printed "UDS failure ... no ECU flow control
+  received" with a transport dump, although a complete single-frame reply had
+  arrived. UdsClient now leaves NRC reporting to the caller and labels
+  single-frame requests as such in transport-failure dumps;
+- the 10 60 rejection gave no reason. M749RamHelper now explains that NRC
+  11/12/7E/7F means session 60 needs a running OEM application, that an ECU
+  left in the resident loader rejects it, and that nothing was uploaded,
+  erased or reset. The typed NegativeResponse is still thrown;
+- the failure text referred to saved progress and --helper-running before the
+  helper had started. M749ReadFlashCli now says the read stopped before the
+  RAM helper started and no flash data was read.
+
+Validation: 230 custom-console tests, 0 failures/errors/skips, including new
+M749RamHelperTest and UdsClientTest cases. Rebuilt the console jar with
+board settings. No ECU access in this step; the read limitation itself is
+unchanged. No commit or push.

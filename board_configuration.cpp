@@ -225,6 +225,19 @@ static void m74_9IgnitionGatePeriodic() {
 	l9779_setPowerStage(ignitionOn);
 }
 
+static float m74_9_getAnalogInputDividerCoefficient(adc_channel_e hwChannel) {
+	switch (hwChannel) {
+		case EFI_ADC_6:
+		case EFI_ADC_7:
+			// F2 (Ignition) and H1+H2 (VBatt after main relay) inputs have 100K + 15K dividers
+			// TODO: confirm exact values
+			return (100.0 + 15.0) / 15.0;
+		default:
+			return engineConfiguration->analogInputDividerCoefficient;
+	}
+	return engineConfiguration->analogInputDividerCoefficient;
+}
+
 static Gpio OUTPUTS[] = {
 	Gpio::L9779_OUT_4, // Injector 1
 	Gpio::L9779_OUT_3, // Injector 2
@@ -271,4 +284,5 @@ void setup_custom_board_overrides() {
 	custom_board_DefaultConfiguration = m74_9_boardDefaultConfiguration;
 	custom_board_ConfigOverrides = m74_9_boardConfigOverrides;
 	custom_board_periodicSlowCallback = m74_9IgnitionGatePeriodic;
+	custom_board_getAnalogInputDividerCoefficient = m74_9_getAnalogInputDividerCoefficient;
 }

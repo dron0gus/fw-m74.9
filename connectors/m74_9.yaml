@@ -323,8 +323,8 @@ pins:
     type: can
 
   - pin: BF2
-    id: L9779_PIN_KEY
-    class: switch_inputs
+    id: [L9779_PIN_KEY, EFI_ADC_7]
+    class: [switch_inputs, analog_inputs]
     function: Ignition key
     type: din
 
@@ -359,6 +359,8 @@ pins:
     type: ign
 
   - pin: BH1
+    id: [A6, EFI_ADC_6]
+    class: [switch_inputs, analog_inputs]
     function: +12v after main relay
     type: 12v
 

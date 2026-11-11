@@ -243,8 +243,9 @@ pins:
   - pin: BB1
     id: L9779_OUT_14
     class: outputs
-    function: Secondary starter relay
-    type:
+    # Used on Lada Granta for the starter relay interlock.
+    function: Starter relay ground control
+    type: gp_low
 
   - pin: BB2
     function: Air conditioner pressure sensor (1,3 levels)

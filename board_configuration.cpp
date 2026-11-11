@@ -64,6 +64,13 @@ static void setupEtb() {
 	engineConfiguration->etb_use_two_wires = false;
 }
 
+static void m74_9_boardDefaultConfigurationGranta() {
+	// Connector B, pin B1 (BB1): L9779 OUT14 sinks the starter relay to GND.
+	// Used on Lada Granta: the starter interlock supplies ground below the cranking RPM threshold.
+	engineConfiguration->starterRelayDisablePin = Gpio::L9779_OUT_14;
+	engineConfiguration->starterRelayDisablePinMode = OM_DEFAULT;
+}
+
 /**
  * @brief   Board-specific configuration defaults.
 
@@ -72,6 +79,10 @@ static void m74_9_boardDefaultConfiguration() {
 	config->ladaCanbusProfile = LadaCanbusProfile::Largus;
 	setInjectorPins();
 	setIgnitionPins();
+
+	if (1) {
+		m74_9_boardDefaultConfigurationGranta();
+	}
 
 	engineConfiguration->cylindersCount = 4;
 	engineConfiguration->firingOrder = FO_1_3_4_2;
